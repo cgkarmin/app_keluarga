@@ -1,2 +1,4 @@
-# app_keluarga
-Pohon Keluarga
+streamlit
+pandas
+sqlite3
+graphviz

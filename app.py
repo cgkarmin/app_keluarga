@@ -57,6 +57,7 @@ def authenticate(username, password):
     return user[0] if user else None
 
 def register_user(username, password):
+    """Daftar pengguna baru ke dalam database."""
     conn = sqlite3.connect("family_tree.db")
     cursor = conn.cursor()
     try:
@@ -67,13 +68,6 @@ def register_user(username, password):
         st.error("❌ Nama pengguna sudah wujud. Sila cuba yang lain.")
     finally:
         conn.close()
-
-def reset_password(username, new_password):
-    conn = sqlite3.connect("family_tree.db")
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET password=? WHERE username=?", (new_password, username))
-    conn.commit()
-    conn.close()
 
 # ===================== PAPARAN STREAMLIT =====================
 create_tables()  # Pastikan database tersedia sebelum aplikasi dimuatkan
@@ -103,6 +97,23 @@ with tab_login:
 
 if st.session_state.user_id is None:
     st.stop()  # Hentikan aplikasi jika belum login
+
+# **TAB 2: DAFTAR AKAUN**
+with tab_register:
+    st.subheader("🆕 Daftar Akaun Baru")
+    
+    new_username = st.text_input("Nama Pengguna", key="register_user")
+    new_password = st.text_input("Kata Laluan", type="password", key="register_pass")
+    confirm_password = st.text_input("Sahkan Kata Laluan", type="password", key="confirm_pass")
+
+    if st.button("📝 Daftar"):
+        if not new_username or not new_password or not confirm_password:
+            st.error("❌ Semua ruangan mesti diisi!")
+        elif new_password != confirm_password:
+            st.error("❌ Kata laluan tidak sepadan!")
+        else:
+            register_user(new_username, new_password)
+            st.success("✅ Akaun berjaya didaftarkan! Sila log masuk.")
 
 # ===================== MENU UTAMA =====================
 st.success(f"✅ Selamat datang, **{st.session_state.username}**!")
@@ -139,19 +150,6 @@ with st.form("add_member"):
         conn.close()
         st.success(f"🎉 {name} berjaya ditambah!")
         st.rerun()
-
-# ===================== BUTANG UNTUK BETULKAN `owner_id` KOSONG =====================
-if st.button("🔄 Betulkan owner_id Kosong"):
-    conn = sqlite3.connect("family_tree.db")
-    cursor = conn.cursor()
-    
-    # Tetapkan owner_id kepada pengguna yang log masuk jika kosong
-    cursor.execute("UPDATE family SET owner_id = ? WHERE owner_id IS NULL", (st.session_state.user_id,))
-    conn.commit()
-    conn.close()
-    
-    st.success("✅ owner_id telah dikemaskini! Sila refresh aplikasi.")
-    st.rerun()
 
 # ===================== SEMAK DATABASE (UNTUK DEBUG) =====================
 if st.button("🔍 Semak Database"):

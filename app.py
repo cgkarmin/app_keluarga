@@ -1,28 +1,15 @@
-import os
-import subprocess
 import streamlit as st
 import pandas as pd
 import sqlite3
 
-# ===================== PAKSA PASANG GRAPHVIZ DI STREAMLIT CLOUD =====================
-try:
-    import graphviz
-except ImportError:
-    st.warning("🚀 Memasang `graphviz` secara automatik... Sila tunggu sebentar!")
-    subprocess.run(["pip", "install", "graphviz"])
-    import graphviz
-
-from graphviz import Digraph
-
 # ===================== KONFIGURASI STREAMLIT =====================
-st.set_page_config(layout="wide")  # Pastikan paparan penuh
+st.set_page_config(layout="wide")  # Pastikan paparan penuh & kemas
 
 # ===================== FUNGSI DATABASE =====================
 def create_tables():
+    """Membuat jadual database jika belum wujud."""
     conn = sqlite3.connect("family_tree.db")
     cursor = conn.cursor()
-
-    # Buat jadual keluarga jika belum ada
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS family (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,12 +22,12 @@ def create_tables():
         owner_id INTEGER NOT NULL
     )
     """)
-
     conn.commit()
     conn.close()
 
-# Fungsi untuk mendapatkan senarai keluarga dalam DataFrame
+# Fungsi mendapatkan data keluarga dalam DataFrame
 def get_family_dataframe():
+    """Mendapatkan data keluarga dalam bentuk Pandas DataFrame."""
     conn = sqlite3.connect("family_tree.db")
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM family")
@@ -50,73 +37,35 @@ def get_family_dataframe():
     df = pd.DataFrame(data, columns=["ID", "Nama", "Pasangan", "Induk (Parent ID)", "Tarikh Lahir", "Telefon", "Minat", "Owner ID"])
     return df
 
-# ===================== POHON KELUARGA DENGAN GRAPHVIZ =====================
-def draw_family_tree_graphviz(selected_parent_id=None):
-    data = get_family_dataframe().values.tolist()
-    
-    dot = Digraph(format="png")
-    dot.attr(dpi="100", size="10,6", bgcolor="#ffffff")  # Saiz besar untuk elak terpotong
-
-    # Pilih data yang perlu dipaparkan
-    if selected_parent_id is None:
-        selected_data = data
-    else:
-        selected_data = [row for row in data if row[3] and selected_parent_id in row[3].split(",")]
-
-    # Tambah nod (ahli keluarga)
-    for row in selected_data:
-        id, name, spouse, parent_id, birth_date, phone, interest, owner_id = row
-        label = name if name else f"ID: {id}"
-        dot.node(str(id), label, shape="box", style="filled", fillcolor="#87CEEB", fontcolor="black")
-
-        # Hubungkan dengan induk (parent)
-        if parent_id:
-            parent_ids = str(parent_id).split(",")
-            for pid in parent_ids:
-                pid = pid.strip()
-                if pid.isdigit():
-                    dot.edge(pid, str(id))  # Hubungkan induk ke anak
-
-    # Simpan fail gambar sementara
-    output_path = "family_tree"
-    dot.render(output_path, format="png", cleanup=True)
-    
-    return output_path + ".png"
-
 # ===================== PAPARAN STREAMLIT =====================
-create_tables()
+create_tables()  # Pastikan database tersedia sebelum aplikasi dimuatkan
 
 st.title("🌳 Aplikasi Pokok Keluarga")
 
-menu = st.radio("Pilih Menu:", ["Papar Pokok Keluarga", "Tambah Ahli Keluarga", "Padam Ahli Keluarga"])
+menu = st.radio("📌 Pilih Menu:", ["Papar Senarai Keluarga", "Tambah Ahli Keluarga", "Padam Ahli Keluarga"])
 
-if menu == "Papar Pokok Keluarga":
-    st.subheader("🔍 Paparkan Pohon Berdasarkan Induk")
+# ========== 1️⃣ PAPAR SENARAI KELUARGA ==========
+if menu == "Papar Senarai Keluarga":
+    st.subheader("📋 Senarai Ahli Keluarga")
     family_df = get_family_dataframe()
+    
     if family_df.empty:
-        st.warning("Tiada data ahli keluarga!")
+        st.warning("⚠ Tiada data ahli keluarga!")
     else:
-        parent_id_search = st.selectbox("Pilih ID Induk", family_df["ID"].astype(str))
-        if st.button("Paparkan Pohon"):
-            tree_path = draw_family_tree_graphviz(parent_id_search)
-            
-            # Debugging: Semak jika fail wujud
-            if not os.path.exists(tree_path):
-                st.error(f"❌ Error: Fail pohon keluarga `{tree_path}` tidak ditemui!")
-                st.stop()
+        st.dataframe(family_df, use_container_width=True)
 
-            st.image(tree_path, use_column_width=True)
-
+# ========== 2️⃣ TAMBAH AHLI KELUARGA ==========
 elif menu == "Tambah Ahli Keluarga":
     st.header("🆕 Tambah Ahli Keluarga")
     with st.form("add_member"):
         name = st.text_input("Nama")
         spouse = st.text_input("Pasangan")
-        parent_id = st.text_input("ID Induk")
+        parent_id = st.text_input("ID Induk (Boleh kosong jika tiada)")
         birth_date = st.text_input("Tarikh Lahir")
         phone = st.text_input("Telefon")
         interest = st.text_area("Minat")
-        submitted = st.form_submit_button("Tambah Ahli")
+        submitted = st.form_submit_button("✅ Tambah Ahli")
+        
         if submitted:
             conn = sqlite3.connect("family_tree.db")
             cursor = conn.cursor()
@@ -126,21 +75,23 @@ elif menu == "Tambah Ahli Keluarga":
             """, (name, spouse, parent_id, birth_date, phone, interest, 1))
             conn.commit()
             conn.close()
-            st.success(f"{name} berjaya ditambah!")
+            st.success(f"🎉 {name} berjaya ditambah!")
             st.rerun()
 
+# ========== 3️⃣ PADAM AHLI KELUARGA ==========
 elif menu == "Padam Ahli Keluarga":
     st.header("🗑️ Padam Ahli Keluarga")
     family_df = get_family_dataframe()
+    
     if family_df.empty:
-        st.warning("Tiada ahli keluarga untuk dipadam.")
+        st.warning("⚠ Tiada ahli keluarga untuk dipadam.")
     else:
-        delete_id = st.selectbox("Pilih ID untuk Padam", family_df["ID"].astype(str))
+        delete_id = st.selectbox("🔽 Pilih ID untuk dipadam", family_df["ID"].astype(str))
         if st.button("❌ Padam Ahli"):
             conn = sqlite3.connect("family_tree.db")
             cursor = conn.cursor()
             cursor.execute("DELETE FROM family WHERE id=?", (delete_id,))
             conn.commit()
             conn.close()
-            st.warning(f"Ahli dengan ID {delete_id} telah dipadam!")
+            st.warning(f"❌ Ahli dengan ID {delete_id} telah dipadam!")
             st.rerun()

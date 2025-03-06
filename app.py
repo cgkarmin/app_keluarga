@@ -182,8 +182,16 @@ with st.form("add_member"):
         st.success(f"🎉 {name} berjaya ditambah!")
         st.rerun()
 
-# ===================== BUTANG LOGOUT =====================
-if st.button("🚪 Log Keluar"):
-    st.session_state.user_id = None
-    st.session_state.username = ""
-    st.rerun()
+# ===================== SEMAK DATABASE (UNTUK DEBUG) =====================
+if st.button("🔍 Semak Database"):
+    conn = sqlite3.connect("family_tree.db")
+    cursor = conn.cursor()
+    users = cursor.execute("SELECT * FROM users").fetchall()
+    family = cursor.execute("SELECT * FROM family").fetchall()
+    conn.close()
+    
+    st.subheader("👤 Senarai Pengguna")
+    st.dataframe(pd.DataFrame(users, columns=["ID", "Nama Pengguna", "Kata Laluan"]) if users else "Tiada pengguna dalam database.")
+
+    st.subheader("👨‍👩‍👧‍👦 Senarai Ahli Keluarga")
+    st.dataframe(pd.DataFrame(family, columns=["ID", "Nama", "Pasangan", "Induk (Parent ID)", "Tarikh Lahir", "Telefon", "Minat", "Owner ID"]) if family else "Tiada ahli keluarga dalam database.")

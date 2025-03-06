@@ -8,8 +8,8 @@ import sqlite3
 try:
     import graphviz
 except ImportError:
-    st.warning("🚀 Memasang `python-graphviz` secara automatik... Sila tunggu sebentar!")
-    subprocess.run(["pip", "install", "python-graphviz"])
+    st.warning("🚀 Memasang `graphviz` secara automatik... Sila tunggu sebentar!")
+    subprocess.run(["pip", "install", "graphviz"])
     import graphviz
 
 from graphviz import Digraph
@@ -99,42 +99,4 @@ if menu == "Papar Pokok Keluarga":
         parent_id_search = st.selectbox("Pilih ID Induk", family_df["ID"].astype(str))
         if st.button("Paparkan Pohon"):
             tree_path = draw_family_tree_graphviz(parent_id_search)
-            st.image(tree_path, use_column_width=True)
-
-elif menu == "Tambah Ahli Keluarga":
-    st.header("🆕 Tambah Ahli Keluarga")
-    with st.form("add_member"):
-        name = st.text_input("Nama")
-        spouse = st.text_input("Pasangan")
-        parent_id = st.text_input("ID Induk")
-        birth_date = st.text_input("Tarikh Lahir")
-        phone = st.text_input("Telefon")
-        interest = st.text_area("Minat")
-        submitted = st.form_submit_button("Tambah Ahli")
-        if submitted:
-            conn = sqlite3.connect("family_tree.db")
-            cursor = conn.cursor()
-            cursor.execute("""
-            INSERT INTO family (name, spouse, parent_id, birth_date, phone, interest, owner_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (name, spouse, parent_id, birth_date, phone, interest, 1))
-            conn.commit()
-            conn.close()
-            st.success(f"{name} berjaya ditambah!")
-            st.rerun()
-
-elif menu == "Padam Ahli Keluarga":
-    st.header("🗑️ Padam Ahli Keluarga")
-    family_df = get_family_dataframe()
-    if family_df.empty:
-        st.warning("Tiada ahli keluarga untuk dipadam.")
-    else:
-        delete_id = st.selectbox("Pilih ID untuk Padam", family_df["ID"].astype(str))
-        if st.button("❌ Padam Ahli"):
-            conn = sqlite3.connect("family_tree.db")
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM family WHERE id=?", (delete_id,))
-            conn.commit()
-            conn.close()
-            st.warning(f"Ahli dengan ID {delete_id} telah dipadam!")
-            st.rerun()
+            st.i

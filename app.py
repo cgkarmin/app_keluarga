@@ -6,10 +6,15 @@ import os
 
 # ===================== SEMAK GRAPHVIZ =====================
 try:
+    # Semak jika Graphviz tersedia dalam sistem
+    if not os.path.exists("/usr/bin/dot") and not os.path.exists("/usr/local/bin/dot"):
+        st.error("❌ Graphviz tidak tersedia dalam sistem Streamlit Cloud. Sila semak `packages.txt`.")
+        st.stop()
+
     import graphviz
     from graphviz import Digraph
 except ImportError:
-    st.error("❌ Graphviz tidak tersedia! Pastikan `packages.txt` mengandungi 'graphviz' dan `requirements.txt` ada 'python-graphviz'.")
+    st.error("❌ Modul Python `graphviz` tidak tersedia! Pastikan `requirements.txt` mengandungi 'python-graphviz'.")
     st.stop()
 
 # ===================== KONFIGURASI STREAMLIT =====================

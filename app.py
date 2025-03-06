@@ -1,21 +1,18 @@
-import hashlib
-import sqlite3
+import os
+import subprocess
 import streamlit as st
 import pandas as pd
-import os
+import sqlite3
 
-# ===================== SEMAK GRAPHVIZ =====================
+# ===================== PAKSA PASANG GRAPHVIZ DI STREAMLIT CLOUD =====================
 try:
-    # Semak jika Graphviz tersedia dalam sistem
-    if not os.path.exists("/usr/bin/dot") and not os.path.exists("/usr/local/bin/dot"):
-        st.error("❌ Graphviz tidak tersedia dalam sistem Streamlit Cloud. Sila semak `packages.txt`.")
-        st.stop()
-
     import graphviz
-    from graphviz import Digraph
 except ImportError:
-    st.error("❌ Modul Python `graphviz` tidak tersedia! Pastikan `requirements.txt` mengandungi 'python-graphviz'.")
-    st.stop()
+    st.warning("🚀 Memasang `python-graphviz` secara automatik... Sila tunggu sebentar!")
+    subprocess.run(["pip", "install", "python-graphviz"])
+    import graphviz
+
+from graphviz import Digraph
 
 # ===================== KONFIGURASI STREAMLIT =====================
 st.set_page_config(layout="wide")  # Pastikan paparan penuh

@@ -33,7 +33,7 @@ def create_tables():
         owner_id INTEGER NOT NULL
     )
     """)
-    
+
     conn.commit()
     conn.close()
 
@@ -101,7 +101,7 @@ with tab_login:
         if user_id:
             st.session_state.user_id = user_id
             st.session_state.username = username
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("❌ Nama pengguna atau kata laluan salah!")
 
@@ -180,10 +180,10 @@ with st.form("add_member"):
         conn.commit()
         conn.close()
         st.success(f"🎉 {name} berjaya ditambah!")
-        st.experimental_rerun()
+        st.rerun()
 
 # ===================== BUTANG LOGOUT =====================
 if st.button("🚪 Log Keluar"):
     st.session_state.user_id = None
     st.session_state.username = ""
-    st.experimental_rerun()
+    st.rerun()

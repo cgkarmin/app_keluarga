@@ -3,7 +3,7 @@ import pandas as pd
 import sqlite3
 
 # ===================== KONFIGURASI STREAMLIT =====================
-st.set_page_config(layout="wide")  # Pastikan paparan penuh & kemas
+st.set_page_config(layout="wide")
 
 # ===================== FUNGSI DATABASE =====================
 def create_tables():
@@ -33,16 +33,16 @@ def create_tables():
         owner_id INTEGER NOT NULL
     )
     """)
-    
+
     conn.commit()
     conn.close()
 
-# Fungsi mendapatkan data keluarga dalam DataFrame
-def get_family_dataframe():
-    """Mendapatkan data keluarga dalam bentuk Pandas DataFrame."""
+# Fungsi mendapatkan data keluarga dalam DataFrame berdasarkan pengguna
+def get_family_dataframe(user_id):
+    """Dapatkan senarai keluarga berdasarkan pengguna."""
     conn = sqlite3.connect("family_tree.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM family")
+    cursor.execute("SELECT * FROM family WHERE owner_id=?", (user_id,))
     data = cursor.fetchall()
     conn.close()
     
@@ -53,35 +53,61 @@ def get_family_dataframe():
 def authenticate(username, password):
     conn = sqlite3.connect("family_tree.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
+    cursor.execute("SELECT id FROM users WHERE username=? AND password=?", (username, password))
     user = cursor.fetchone()
     conn.close()
-    return user
+    return user[0] if user else None
+
+# Fungsi untuk daftar pengguna baru
+def register_user(username, password):
+    conn = sqlite3.connect("family_tree.db")
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+        conn.commit()
+        st.success("🎉 Pendaftaran berjaya! Sila log masuk.")
+    except sqlite3.IntegrityError:
+        st.error("❌ Nama pengguna sudah wujud. Sila cuba yang lain.")
+    finally:
+        conn.close()
 
 # ===================== PAPARAN STREAMLIT =====================
 create_tables()  # Pastikan database tersedia sebelum aplikasi dimuatkan
 
 st.title("🌳 Aplikasi Pokok Keluarga")
 
-# ===================== LOGIN SISTEM =====================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-    st.session_state.username = ""
+# ===================== SISTEM LOGIN & PENDAFTARAN =====================
+if "user_id" not in st.session_state:
+    st.session_state.user_id = None
 
-if not st.session_state.logged_in:
-    st.subheader("🔐 Sila Log Masuk")
-    username = st.text_input("Nama Pengguna", key="username")
-    password = st.text_input("Kata Laluan", type="password", key="password")
+tab_login, tab_register = st.tabs(["🔐 Log Masuk", "🆕 Daftar Akaun"])
+
+with tab_login:
+    st.subheader("🔐 Log Masuk")
+    username = st.text_input("Nama Pengguna", key="login_user")
+    password = st.text_input("Kata Laluan", type="password", key="login_pass")
     
     if st.button("Login"):
-        user = authenticate(username, password)
-        if user:
-            st.session_state.logged_in = True
+        user_id = authenticate(username, password)
+        if user_id:
+            st.session_state.user_id = user_id
             st.session_state.username = username
             st.experimental_rerun()
         else:
             st.error("❌ Nama pengguna atau kata laluan salah!")
 
+with tab_register:
+    st.subheader("🆕 Daftar Akaun Baru")
+    new_username = st.text_input("Nama Pengguna Baru", key="register_user")
+    new_password = st.text_input("Kata Laluan", type="password", key="register_pass")
+    
+    if st.button("Daftar"):
+        if new_username and new_password:
+            register_user(new_username, new_password)
+        else:
+            st.error("⚠ Nama pengguna dan kata laluan tidak boleh kosong!")
+
+if st.session_state.user_id is None:
     st.stop()  # Hentikan aplikasi jika belum login
 
 # ===================== MENU UTAMA =====================
@@ -89,7 +115,7 @@ st.success(f"✅ Selamat datang, **{st.session_state.username}**!")
 
 st.subheader("📋 Senarai Ahli Keluarga & Tambah Ahli Baru")
 
-family_df = get_family_dataframe()
+family_df = get_family_dataframe(st.session_state.user_id)
 
 # Paparkan Senarai Keluarga
 if family_df.empty:
@@ -114,8 +140,14 @@ with st.form("add_member"):
         cursor.execute("""
         INSERT INTO family (name, spouse, parent_id, birth_date, phone, interest, owner_id) 
         VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (name, spouse, parent_id, birth_date, phone, interest, 1))
+        """, (name, spouse, parent_id, birth_date, phone, interest, st.session_state.user_id))
         conn.commit()
         conn.close()
         st.success(f"🎉 {name} berjaya ditambah!")
         st.experimental_rerun()
+
+# ===================== BUTANG LOGOUT =====================
+if st.button("🚪 Log Keluar"):
+    st.session_state.user_id = None
+    st.session_state.username = ""
+    st.experimental_rerun()

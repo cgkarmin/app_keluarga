@@ -33,7 +33,7 @@ def create_tables():
         owner_id INTEGER NOT NULL
     )
     """)
-
+    
     conn.commit()
     conn.close()
 
@@ -71,17 +71,26 @@ def register_user(username, password):
     finally:
         conn.close()
 
+# Fungsi untuk reset kata laluan
+def reset_password(username, new_password):
+    conn = sqlite3.connect("family_tree.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET password=? WHERE username=?", (new_password, username))
+    conn.commit()
+    conn.close()
+
 # ===================== PAPARAN STREAMLIT =====================
 create_tables()  # Pastikan database tersedia sebelum aplikasi dimuatkan
 
 st.title("🌳 Aplikasi Pokok Keluarga")
 
-# ===================== SISTEM LOGIN & PENDAFTARAN =====================
+# ===================== SISTEM LOGIN, PENDAFTARAN & RESET PASSWORD =====================
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
 
-tab_login, tab_register = st.tabs(["🔐 Log Masuk", "🆕 Daftar Akaun"])
+tab_login, tab_register, tab_forgot = st.tabs(["🔐 Log Masuk", "🆕 Daftar Akaun", "🔑 Lupa Kata Laluan"])
 
+# **TAB 1: LOGIN**
 with tab_login:
     st.subheader("🔐 Log Masuk")
     username = st.text_input("Nama Pengguna", key="login_user")
@@ -96,6 +105,7 @@ with tab_login:
         else:
             st.error("❌ Nama pengguna atau kata laluan salah!")
 
+# **TAB 2: PENDAFTARAN**
 with tab_register:
     st.subheader("🆕 Daftar Akaun Baru")
     new_username = st.text_input("Nama Pengguna Baru", key="register_user")
@@ -106,6 +116,32 @@ with tab_register:
             register_user(new_username, new_password)
         else:
             st.error("⚠ Nama pengguna dan kata laluan tidak boleh kosong!")
+
+# **TAB 3: LUPA KATA LALUAN**
+with tab_forgot:
+    st.subheader("🔑 Reset Kata Laluan")
+    forgot_username = st.text_input("Nama Pengguna", key="forgot_user")
+    new_password = st.text_input("Kata Laluan Baru", type="password", key="forgot_pass1")
+    confirm_password = st.text_input("Sahkan Kata Laluan Baru", type="password", key="forgot_pass2")
+    
+    if st.button("Reset Kata Laluan"):
+        if forgot_username and new_password and confirm_password:
+            if new_password == confirm_password:
+                conn = sqlite3.connect("family_tree.db")
+                cursor = conn.cursor()
+                cursor.execute("SELECT id FROM users WHERE username=?", (forgot_username,))
+                user = cursor.fetchone()
+                conn.close()
+                
+                if user:
+                    reset_password(forgot_username, new_password)
+                    st.success("✅ Kata laluan berjaya ditukar! Sila log masuk dengan kata laluan baru.")
+                else:
+                    st.error("❌ Nama pengguna tidak wujud!")
+            else:
+                st.error("⚠ Kata laluan baru tidak sepadan!")
+        else:
+            st.error("⚠ Semua medan mesti diisi!")
 
 if st.session_state.user_id is None:
     st.stop()  # Hentikan aplikasi jika belum login
